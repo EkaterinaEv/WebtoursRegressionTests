@@ -1,5 +1,0 @@
-{
-  "values[Username]": "#{username}",
-  "values[Password]": "#{password}",
-  "mode": "raw"
-}

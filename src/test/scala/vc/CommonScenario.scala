@@ -36,10 +36,33 @@ class CommonScenario {
     )
   }
 
+  // Основной блок бронирования (повторяется в цикле)
+  private def bookingBlock =
+    feed(cityPairs)
+      .feed(Feeders.passengers)
+      .exec(Actions.goToFlights)
+      .pause(1, 3)
+      .exec(Actions.goToReservation)
+      .pause(1, 3)
+      .exec(Actions.findFlight)
+      .exec(session => {
+        val flights = session("flightsList").as[List[String]]
+        if (flights.isEmpty) {
+          throw new Exception(s"No flights found for route")
+        }
+        val randomFlight = Random.shuffle(flights).head
+        session.set("outboundFlight", randomFlight)
+      })
+      .pause(1, 3)
+      .exec(Actions.selectFlight)
+      .pause(1, 3)
+      .exec(Actions.buyTicket)
+      .pause(1, 3)
+      .exec(Actions.goHome)
+
   val scn: ScenarioBuilder = scenario("Common scenario")
+    // 1. Авторизация (один раз)
     .feed(Feeders.users)
-    .feed(cityPairs)
-    .feed(Feeders.passengers)
     .exec(Actions.getMainPage)
     .pause(1, 3)
     .exec(Actions.createSession)
@@ -48,24 +71,10 @@ class CommonScenario {
     .pause(1, 3)
     .exec(Actions.login)
     .pause(1, 3)
-    .exec(Actions.goToFlights)
-    .pause(1, 3)
-    .exec(Actions.goToReservation)
-    .pause(1, 3)
-    .exec(Actions.findFlight)
-    .exec(session => {
-      val flights = session("flightsList").as[List[String]]
-      if (flights.nonEmpty) {
-        val randomFlight = Random.shuffle(flights).head
-        session.set("outboundFlight", randomFlight)
-      } else {
-        session.set("outboundFlight", "090;10/23/2026;10/23/2026;San Francisco;Denver;545")
+    // 2. Бесконечный цикл с exitBlockOnFail
+    .forever(
+      exitBlockOnFail {
+        bookingBlock
       }
-    })
-    .pause(1, 3)
-    .exec(Actions.selectFlight)
-    .pause(1, 3)
-    .exec(Actions.buyTicket)
-    .pause(1, 3)
-    .exec(Actions.goHome)
+    )
 }

@@ -52,6 +52,8 @@ class InjectionProfile extends Simulation {
     .maxDuration(STEP_DURATION * 10 + 10.minutes)
     .assertions(
       global.failedRequests.percent.lt(5),
-      global.responseTime.mean.lt(3000)
+      global.responseTime.mean.lt(3000),
+      global.responseTime.percentile(95).lt(5000),
+      global.responseTime.percentile(99).lt(8000)
     )
 }
