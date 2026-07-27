@@ -1,0 +1,7 @@
+[0m[[0m[0mdebug[0m] [0m[0mCopy resource mappings: [0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\gatling.conf,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\gatling.conf)[0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\logback.xml,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\logback.xml)[0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\passengers.csv,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\passengers.csv)[0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\raw.json,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\raw.json)[0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\recorder.conf,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\recorder.conf)[0m
+[0m[[0m[0mdebug[0m] [0m[0m	(C:\Users\EkaterinaEv\Desktop\GatlingProject\src\test\resources\users.csv,C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes\users.csv)[0m

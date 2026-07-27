@@ -1,0 +1,20 @@
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mCreated transactional ClassFileManager with tempDir = C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes.bak[0m
+[0m[[0m[0mdebug[0m] [0m[0mAbout to delete class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mWe backup class files:[0m
+[0m[[0m[0mdebug[0m] [0m[0mRegistering generated classes:[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Debug.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	package.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Actions$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Feeders$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CommonScenario$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	QuickCheck.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	InjectionProfile.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	CommonScenario.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	package$.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	ReliabilityTest.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Feeders.class[0m
+[0m[[0m[0mdebug[0m] [0m[0m	Actions.class[0m
+[0m[[0m[0mdebug[0m] [0m[0mRemoving the temporary directory used for backing up class files: C:\Users\EkaterinaEv\Desktop\GatlingProject\target\scala-2.13\test-classes.bak[0m
