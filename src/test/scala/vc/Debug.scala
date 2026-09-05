@@ -13,6 +13,6 @@ class Debug extends Simulation {
   )
     .maxDuration(2.minutes)
     .assertions(
-      global.failedRequests.percent.lt(100) // Не даём тесту упасть, если есть ошибки
+      global.failedRequests.percent.lt(100)
     )
 }
