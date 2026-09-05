@@ -6,9 +6,9 @@ import scala.concurrent.duration._
 
 class InjectionProfile extends Simulation {
 
-  private val MAX_USERS = 100 // Максимум пользователей (100%)
-  private val STEP_USERS = MAX_USERS / 10 // 10 пользователей = 10%
-  private val STEP_DURATION = 5.minutes // Длительность каждой ступени
+  private val MAX_USERS = 100
+  private val STEP_USERS = MAX_USERS / 10
+  private val STEP_DURATION = 5.minutes
 
   private val scn = CommonScenario()
 
@@ -47,7 +47,7 @@ class InjectionProfile extends Simulation {
 
       rampConcurrentUsers(0).to(STEP_USERS * 10).during(30.seconds),
       constantConcurrentUsers(STEP_USERS * 10).during(STEP_DURATION)
-    ).protocols(httpProtocol)
+    ).protocols(createProtocol(Env.BASE_URL_80)) // Для эталонного используем порт 1080
   )
     .maxDuration(STEP_DURATION * 10 + 10.minutes)
     .assertions(

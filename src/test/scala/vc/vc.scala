@@ -2,11 +2,15 @@ import io.gatling.core.Predef._
 import io.gatling.http.Predef._
 import io.gatling.http.protocol.HttpProtocolBuilder
 
-
 package object vc {
 
-  val httpProtocol: HttpProtocolBuilder = http
-    .baseUrl("http://webtours.load-test.ru:1080")
+  object Env {
+    val BASE_URL_80 = "http://webtours.load-test.ru:1080"
+    val BASE_URL_90 = "http://webtours.load-test.ru:1090"
+  }
+
+  def createProtocol(baseUrl: String): HttpProtocolBuilder = http
+    .baseUrl(baseUrl)
     .proxy(Proxy("localhost", 8888))
     .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7")
     .acceptEncodingHeader("gzip, deflate")
