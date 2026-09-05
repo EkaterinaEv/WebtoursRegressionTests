@@ -2,164 +2,95 @@ package vc
 
 import java.io.File
 import scala.io.Source
+import scala.util.Using
 
 object ResultsComparator {
 
-  case class TestMetrics(
-                          totalRequests: Int,
-                          successfulRequests: Int,
-                          failedRequests: Int,
-                          errorPercent: Double,
-                          meanResponseTime: Double,
-                          p95ResponseTime: Double,
-                          p99ResponseTime: Double,
-                          minResponseTime: Double,
-                          maxResponseTime: Double
-                        )
+  case class Metrics(
+                      total: Int,
+                      errors: Int,
+                      errorPercent: Double,
+                      mean: Double,
+                      p95: Double,
+                      p99: Double
+                    )
 
-  def parseSimulationLog(logPath: String): TestMetrics = {
-    val logFile = new File(logPath)
-    if (!logFile.exists()) {
-      throw new Exception(s"Log file not found: $logPath")
+  def parseLog(path: String): Metrics = {
+    val lines = Using.resource(Source.fromFile(path)) {
+      _.getLines().toList
     }
 
-    val lines = Source.fromFile(logFile).getLines().toList
-    val requestLines = lines.filter(_.contains("REQUEST"))
-    val okLines = requestLines.filter(_.contains("OK"))
-    val koLines = requestLines.filter(_.contains("KO"))
+    val requests = lines.filter(_.contains("REQUEST"))
+    val ok = requests.filter(_.contains("OK"))
+    val ko = requests.filter(_.contains("KO"))
 
-    val total = requestLines.size
-    val ok = okLines.size
-    val ko = koLines.size
+    val times = requests.flatMap { line =>
+      """(\d+)ms""".r.findFirstMatchIn(line).map(_.group(1).toInt)
+    }.sorted.map(_.toDouble)
 
-    // Парсинг времени ответа
-    val responseTimes = requestLines.flatMap { line =>
-      // Пример: "REQUEST OK ... 234ms"
-      val pattern = """(\d+)ms""".r
-      pattern.findFirstMatchIn(line).map(_.group(1).toInt)
-    }.map(_.toDouble)
-
-    val sortedTimes = responseTimes.sorted
-    val mean = if (sortedTimes.nonEmpty) sortedTimes.sum / sortedTimes.size else 0.0
-    val p95Index = (sortedTimes.size * 0.95).toInt
-    val p99Index = (sortedTimes.size * 0.99).toInt
-
-    TestMetrics(
-      totalRequests = total,
-      successfulRequests = ok,
-      failedRequests = ko,
-      errorPercent = if (total > 0) (ko.toDouble / total) * 100 else 0.0,
-      meanResponseTime = mean,
-      p95ResponseTime = if (sortedTimes.nonEmpty) sortedTimes(p95Index) else 0.0,
-      p99ResponseTime = if (sortedTimes.nonEmpty) sortedTimes(p99Index) else 0.0,
-      minResponseTime = if (sortedTimes.nonEmpty) sortedTimes.head else 0.0,
-      maxResponseTime = if (sortedTimes.nonEmpty) sortedTimes.last else 0.0
+    Metrics(
+      total = requests.size,
+      errors = ko.size,
+      errorPercent = if (requests.nonEmpty) (ko.size.toDouble / requests.size) * 100 else 0.0,
+      mean = if (times.nonEmpty) times.sum / times.size else 0.0,
+      p95 = if (times.nonEmpty) times(((times.size * 0.95).toInt).min(times.size - 1)) else 0.0,
+      p99 = if (times.nonEmpty) times(((times.size * 0.99).toInt).min(times.size - 1)) else 0.0
     )
   }
 
-  def getLatestResult(prefix: String): Option[String] = {
-    val resultsDir = new File("gatling/results")
-    if (!resultsDir.exists()) {
-      println(s"❌ Results directory not found: ${resultsDir.getAbsolutePath}")
-      return None
-    }
+  def getLatestLog(prefix: String): Option[String] = {
+    val dir = new File("gatling/results")
+    if (!dir.exists()) return None
 
-    val dirs = resultsDir.listFiles()
+    dir.listFiles()
       .filter(_.isDirectory)
       .filter(_.getName.startsWith(prefix))
-      .filter(_.listFiles().exists(_.getName == "simulation.log"))
       .sortBy(_.getName)
       .reverse
-
-    dirs.headOption.map(_.getAbsolutePath + "/simulation.log")
+      .headOption
+      .map(f => s"${f.getAbsolutePath}/simulation.log")
   }
 
-  def compareLatest(): Unit = {
-    println("\n" + "=" * 80)
-    println("СРАВНИТЕЛЬНЫЙ АНАЛИЗ РЕЗУЛЬТАТОВ")
-    println("=" * 80)
+  def compare(): Unit = {
+    val baseline = getLatestLog("baselinetest")
+    val regression = getLatestLog("regressiontest")
 
-    val baselineLog = getLatestResult("baselinetest")
-    val regressionLog = getLatestResult("regressiontest")
-
-    if (baselineLog.isEmpty || regressionLog.isEmpty) {
-      println("\n❌ Не найдены логи тестов!")
-      println("Убедитесь, что:")
-      println("  1. Тесты были запущены")
-      println("  2. Результаты находятся в папке gatling/results/")
-      println("  3. Имена папок начинаются с 'baselinetest' и 'regressiontest'")
+    if (baseline.isEmpty || regression.isEmpty) {
+      println("Logs not found. Run tests first.")
       return
     }
 
-    try {
-      val baseline = parseSimulationLog(baselineLog.get)
-      val regression = parseSimulationLog(regressionLog.get)
+    val b = parseLog(baseline.get)
+    val r = parseLog(regression.get)
 
-      println("\n" + "-" * 80)
-      println(f"${"Метрика"}%-30s ${"Эталон (1080)"}%18s ${"Регрессия (1090)"}%18s ${"Отклонение"}%15s")
-      println("-" * 80)
+    println("\nComparison Results:")
+    println("=" * 60)
+    println(f"Metric${" " * 20} Baseline  Regression  Change")
+    println("-" * 60)
 
-      // Сравнение каждой метрики
-      def printComparison(label: String, baseVal: Double, regVal: Double, format: String = "%.0f"): Unit = {
-        val diff = if (baseVal != 0) ((regVal - baseVal) / baseVal) * 100 else 0.0
-        val status = if (Math.abs(diff) > 5) "⚠️" else "✅"
-        println(f"$label%-30s $baseVal%18$format $regVal%18$format ${diff}%+14.1f%% $status")
-      }
+    def diff(base: Double, reg: Double): Double =
+      if (base != 0) ((reg - base) / base) * 100 else 0.0
 
-      printComparison("Всего запросов", baseline.totalRequests, regression.totalRequests, "%.0f")
-      printComparison("Успешных запросов", baseline.successfulRequests, regression.successfulRequests, "%.0f")
-      printComparison("Ошибки", baseline.errorPercent, regression.errorPercent, "%.2f")
-      printComparison("Среднее время (мс)", baseline.meanResponseTime, regression.meanResponseTime, "%.0f")
-      printComparison("95-й перцентиль", baseline.p95ResponseTime, regression.p95ResponseTime, "%.0f")
-      printComparison("99-й перцентиль", baseline.p99ResponseTime, regression.p99ResponseTime, "%.0f")
-      printComparison("Минимальное время", baseline.minResponseTime, regression.minResponseTime, "%.0f")
-      printComparison("Максимальное время", baseline.maxResponseTime, regression.maxResponseTime, "%.0f")
+    println(f"Total requests${" " * 10} ${b.total}%8d  ${r.total}%10d  ${diff(b.total, r.total)}%+8.1f%%")
+    println(f"Error rate${" " * 13} ${b.errorPercent}%7.2f%%  ${r.errorPercent}%9.2f%%  ${diff(b.errorPercent, r.errorPercent)}%+8.1f%%")
+    println(f"Mean (ms)${" " * 15} ${b.mean}%8.0f  ${r.mean}%10.0f  ${diff(b.mean, r.mean)}%+8.1f%%")
+    println(f"95th pct${" " * 15} ${b.p95}%8.0f  ${r.p95}%10.0f  ${diff(b.p95, r.p95)}%+8.1f%%")
+    println(f"99th pct${" " * 15} ${b.p99}%8.0f  ${r.p99}%10.0f  ${diff(b.p99, r.p99)}%+8.1f%%")
 
-      println("-" * 80)
+    println("=" * 60)
 
-      // Заключение
-      val meanDegradation = ((regression.meanResponseTime - baseline.meanResponseTime) / baseline.meanResponseTime) * 100
-      val errorIncrease = regression.errorPercent - baseline.errorPercent
+    val meanDeg = diff(b.mean, r.mean)
+    val errDeg = r.errorPercent - b.errorPercent
 
-      println("\n📋 ЗАКЛЮЧЕНИЕ:")
-      if (meanDegradation > 10) {
-        println(f"  ❌ СРЕДНЕЕ ВРЕМЯ ВЫРОСЛО НА ${meanDegradation}%.1f%% (>10%) - ДЕГРАДАЦИЯ")
-      } else if (meanDegradation > 5) {
-        println(f"  ⚠️ СРЕДНЕЕ ВРЕМЯ ВЫРОСЛО НА ${meanDegradation}%.1f%% (5-10%) - НЕЗНАЧИТЕЛЬНАЯ ДЕГРАДАЦИЯ")
-      } else if (meanDegradation < -5) {
-        println(f"  ✅ СРЕДНЕЕ ВРЕМЯ СНИЗИЛОСЬ НА ${Math.abs(meanDegradation)}%.1f%% - УЛУЧШЕНИЕ")
-      } else {
-        println(f"  ✅ СРЕДНЕЕ ВРЕМЯ ИЗМЕНИЛОСЬ НА ${meanDegradation}%.1f%% (<5%) - БЕЗ ИЗМЕНЕНИЙ")
-      }
-
-      if (errorIncrease > 1) {
-        println(f"  ❌ ОШИБКИ ВЫРОСЛИ НА ${errorIncrease}%.2f%% (>1%) - ПРОБЛЕМА")
-      } else if (errorIncrease > 0.5) {
-        println(f"  ⚠️ ОШИБКИ ВЫРОСЛИ НА ${errorIncrease}%.2f%% (0.5-1%) - ВНИМАНИЕ")
-      } else {
-        println(f"  ✅ ОШИБКИ В ПРЕДЕЛАХ НОРМЫ (${errorIncrease}%+.2f%%)")
-      }
-
-      // Итоговый вердикт
-      println("\n" + "=" * 80)
-      if (meanDegradation > 10 || errorIncrease > 1) {
-        println("🚫 ВЕРДИКТ: РЕЛИЗ НЕ РЕКОМЕНДУЕТСЯ - ЕСТЬ КРИТИЧЕСКАЯ ДЕГРАДАЦИЯ")
-      } else if (meanDegradation > 5 || errorIncrease > 0.5) {
-        println("⚠️ ВЕРДИКТ: РЕЛИЗ ВОЗМОЖЕН С ОГОВОРКАМИ - ТРЕБУЕТСЯ ДОРАБОТКА")
-      } else {
-        println("✅ ВЕРДИКТ: РЕЛИЗ РЕКОМЕНДУЕТСЯ - ДЕГРАДАЦИИ НЕТ")
-      }
-      println("=" * 80 + "\n")
-
-    } catch {
-      case e: Exception =>
-        println(s"\n❌ Ошибка при парсинге логов: ${e.getMessage}")
-        e.printStackTrace()
+    if (meanDeg > 10 || errDeg > 1) {
+      println("VERDICT: RELEASE NOT RECOMMENDED - CRITICAL DEGRADATION")
+    } else if (meanDeg > 5 || errDeg > 0.5) {
+      println("VERDICT: RELEASE WITH CAUTION - MINOR DEGRADATION")
+    } else {
+      println("VERDICT: RELEASE RECOMMENDED - NO DEGRADATION")
     }
+    println("=" * 60)
   }
 
-  // Основной метод для запуска
-  def main(args: Array[String]): Unit = {
-    compareLatest()
-  }
+  def main(args: Array[String]): Unit = compare()
 }
